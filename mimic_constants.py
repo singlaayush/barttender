@@ -9,7 +9,7 @@ def get_master_df(idp=False):
         # (2375, 104)
         return pd.read_pickle(feature_folder / 'MIMIC_features_with_IDPs.pkl')
     
-    return pd.read_pickle(feature_folder / 'MIMIC_features_v4.pkl')
+    return pd.read_pickle(feature_folder / 'MIMIC_features_v3.pkl')
 
 # Labels
 chart_labels_mean = {
