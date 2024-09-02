@@ -1,3 +1,6 @@
 [submodule "CardiomegalyBiomarkers"]
 	path = CardiomegalyBiomarkers
 	url = https://github.com/singlaayush/CardiomegalyBiomarkers.git
+[submodule "MMCL-Tabular-Imaging"]
+	path = MMCL-Tabular-Imaging
+	url = https://github.com/singlaayush/MMCL-Tabular-Imaging.git
