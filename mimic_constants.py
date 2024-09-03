@@ -89,6 +89,19 @@ significant_variables_all = ['age_val', 'RR_mean', 'Chloride_mean', 'Urea_Nitrog
 # includes only those with a small number of NaNs
 significant_variables = ['age_val', 'Chloride_mean', 'RR_mean', 'Urea_Nitrogren_mean', 'Magnesium_mean', 'Glucose_mean', 'Phosphate_mean', 'Hematocrit_mean']
 
+significant_variables_areas = {
+    'image': slice(None, 185),
+	'age_bar': slice(185, 190),
+	'chloride_bar': slice(190, 194),
+	'rr_bar': slice(194, 198),
+	'urea_bar': slice(198, 202),
+	'nitrogren_bar': slice(202, 207),
+	'magnesium_bar': slice(207, 211),
+	'glucose_bar': slice(211, 215),
+	'phosphate_bar': slice(215, 220),
+	'hematocrit_bar': slice(220, 224),
+}
+
 # Labels
 chart_labels_mean = {
     220045: 'HR_mean',
@@ -203,6 +216,16 @@ lab_labels_min_cols    = list(lab_labels_min.values())
 stats_header = ['filename', 'area', 'mean', 'min', '25th_percentile', 'median', 
                '75th_percentile', 'max', 'std_mean', 'std_median']
 
+k_fold_run_id = {'xray' : 'wqzq428c',
+'noise': 'jfpf2s6m',
+'blank': 'yxa5wmrg'}
+
+k_fold_test_pred_csv_path = {
+    'xray' : Path('/home/ays124/mimic/cardiomegaly/cross-val/densenet-xray-age_chloride_rr_urea_nitrogren_magnesium_glucose_phosphate_hematocrit-idp/fold4-wqzq428c/predictions.test.csv'),
+    'noise': Path('/home/ays124/mimic/cardiomegaly/cross-val/densenet-noise-age_chloride_rr_urea_nitrogren_magnesium_glucose_phosphate_hematocrit-idp/fold4-jfpf2s6m/predictions.test.csv'),
+    'blank': Path('/home/ays124/mimic/cardiomegaly/cross-val/densenet-blank-age_chloride_rr_urea_nitrogren_magnesium_glucose_phosphate_hematocrit-idp/fold9-yxa5wmrg/predictions.test.csv')
+}
+
 def rgb2gray(rgb):
     return np.dot(rgb[...,:3], [0.2989, 0.5870, 0.1140])
 
@@ -229,6 +252,12 @@ def get_mask_stats_csv_path(image_type, suffix, mask_type, label):
 def get_mask_stats_csv(image_type, suffix, mask_type, label):
     return pd.read_csv(get_mask_stats_csv_path(image_type, suffix, mask_type, label), names=stats_header)
 
+def sanity_check_stats_csv(stats_df, areas=significant_variables_areas):
+    total_len = stats_df.shape[0]
+    for key in areas.keys():
+        len_non_zero = stats_df[(stats_df['area'] == key) & (stats_df['mean'] > 0)].shape[0]
+        print(f"For {key}: {len_non_zero} samples out of {total_len} are non-zero.")
+
 def get_correct_root_dir(sub_path):
     if (scratch_dir / sub_path).exists():
         return scratch_dir
@@ -248,7 +277,7 @@ def construct_preproc_path_str(og_path: str, root_dir: Path, preproc_dir=None):
     return construct_preproc_path(og_path, root_dir, preproc_dir).as_posix()
 
 def df_add_preproc_path_col(df, data_dir, preproc_dir):
-    df['path_preproc'] = df['Path'].apply(construct_preproc_path_str, args=(data_dir, preproc_dir))
+    df['path_preproc'] = df['path'].apply(construct_preproc_path_str, args=(data_dir, preproc_dir))
     return df
 
 def get_merged_stats_sample_df(image_type, suffix, mask_type, label, split, idp):

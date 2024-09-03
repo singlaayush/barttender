@@ -484,6 +484,11 @@ def main(image_type: str = 'xray', order = None, batch_size: int = 192, epochs: 
     df_metrics_summary.to_csv(exp_dir / 'metrics_summary.csv', index=False)
 
     df_fold_metrics = pd.DataFrame(fold_metrics)
+    val_metrics_df = df_fold_metrics['val_metrics'].apply(pd.Series).add_prefix('val_')
+    test_metrics_df = df_fold_metrics['test_metrics'].apply(pd.Series).add_prefix('test_')
+
+    # Concatenate the original DataFrame with the new metrics columns
+    df_fold_metrics = pd.concat([df_fold_metrics[['fold']], val_metrics_df, test_metrics_df], axis=1)
     df_fold_metrics.to_csv(exp_dir / 'fold_metrics.csv', index=False)
 
     # Log the fold that was best for each metric
