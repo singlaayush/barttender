@@ -1,3 +1,9 @@
 venv/
 MIMIC_features/
 __pycache__/
+fold*/
+test.csv
+train.csv
+val.csv
+cardiomegaly/mimic/
+cardiomegaly/wandb/

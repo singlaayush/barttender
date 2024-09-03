@@ -10,7 +10,10 @@ import torch.nn as nn
 import pytorch_lightning as pl
 import torch.nn.functional as F
 import torchvision.models as models
+from sklearn.model_selection import train_test_split
 from pathlib import Path
+
+num_classes = 1
 
 # every path returned from this file MUST be a pathlib.Path object
 home_out_dir = Path("/home/ays124/mimic/cardiomegaly/")
@@ -22,10 +25,62 @@ feature_folder = Path('/home/ays124/mimic/CardiomegalyBiomarkers/Cardiomegaly_Cl
 
 def get_master_df(idp=False):
     if idp:
-        # (2375, 104)
-        return pd.read_pickle(feature_folder / 'MIMIC_features_with_IDPs.pkl')
-    
+        # (2662, 104)
+        return pd.read_pickle('/home/ays124/mimic/CardiomegalyBiomarkers/Cardiomegaly_Classification/MIMIC_features_OG/MIMIC_features.pkl')
     return pd.read_pickle(feature_folder / 'MIMIC_features_v3.pkl')
+
+def get_cardiomegaly_df(idp=False):
+    df = None
+    if idp:
+        df = pd.read_pickle('/home/ays124/mimic/CardiomegalyBiomarkers/Cardiomegaly_Classification/MIMIC_features_OG/MIMIC_features.pkl')
+    else:
+        df = pd.read_pickle(feature_folder / 'MIMIC_features_v3.pkl')
+    return df[df['Cardiomegaly'].isin([0, 1])]
+
+def df_train_test_split(df, test_size=0.2, val_size=0.1):
+    # Pre-select test samples
+    test_set = df[df['split'] == 'test']
+    
+    # Remaining data (not in the test set)
+    remaining_df = df[df['split'] != 'test']
+    
+    # Group remaining data by 'subject_id'
+    grouped = remaining_df.groupby('subject_id')
+
+    # Ensure each subject is fully in one of the splits
+    subjects = grouped.first().index
+    
+    # Determine split sizes
+    total_remaining = len(remaining_df)
+    num_test = len(test_set)
+    adjusted_test_size = round(test_size - (num_test / len(df)), 2)
+    adjusted_train_size = round(1 - adjusted_test_size - val_size, 2)
+    
+    # Perform stratified train/val/test split based on subject_id
+    train_subjects, val_test_subjects = train_test_split(subjects, 
+                                                         test_size=round(val_size + adjusted_test_size, 2),
+                                                         train_size=adjusted_train_size,
+                                                         random_state=42)
+    
+    val_subjects, new_test_subjects = train_test_split(val_test_subjects,
+                                                       test_size=round(adjusted_test_size / (val_size + adjusted_test_size), 2),
+                                                       train_size=round(val_size / (val_size + adjusted_test_size), 2),
+                                                       random_state=42)
+
+    # Build the final splits
+    train_set = remaining_df[remaining_df['subject_id'].isin(train_subjects)]
+    val_set = remaining_df[remaining_df['subject_id'].isin(val_subjects)]
+    new_test_set = remaining_df[remaining_df['subject_id'].isin(new_test_subjects)]
+    
+    # Combine pre-selected test set with the newly created test set
+    final_test_set = pd.concat([test_set, new_test_set])
+    
+    # Add the split labels to the sets
+    train_set.loc[:, 'split'] = 'train'
+    val_set.loc[:, 'split'] = 'val'
+    final_test_set.loc[:, 'split'] = 'test'
+    
+    return train_set.reset_index(drop=True), val_set.reset_index(drop=True), final_test_set.reset_index(drop=True)
 
 # includes those with a high number of NaNs
 significant_variables_all = ['age_val', 'RR_mean', 'Chloride_mean', 'Urea_Nitrogren_mean', 'SaO2_mean', \
@@ -151,7 +206,11 @@ stats_header = ['filename', 'area', 'mean', 'min', '25th_percentile', 'median',
 def rgb2gray(rgb):
     return np.dot(rgb[...,:3], [0.2989, 0.5870, 0.1140])
 
-def get_barcode_order_info(order=None, bar_variables=significant_variables):
+def get_barcode_order_info(order=None, no_bars=False, nan=False, bar_variables=significant_variables):
+    if no_bars:
+        return None, 'no_bars'
+    if nan:
+        bar_variables=significant_variables_all
     og_order = np.array(bar_variables)
     order = [int(x) for x in order.strip('[]').split(',')] if isinstance(order, str) else order
     order = list(range(len(bar_variables))) if order is None else order
@@ -285,3 +344,45 @@ class DenseNet(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         loss = self.process_batch(batch)
         self.log('test_loss', loss)
+
+def standardize_mimic_ethnicity(df):
+    # Mapping of original ethnicities to standardized categories
+    ethnicity_mapping = {
+        "WHITE": "White",
+        "WHITE - OTHER EUROPEAN": "White",
+        "WHITE - RUSSIAN": "White",
+        "WHITE - EASTERN EUROPEAN": "White",
+        "WHITE - BRAZILIAN": "White",
+        "BLACK/AFRICAN AMERICAN": "Black",
+        "BLACK/CAPE VERDEAN": "Black",
+        "BLACK/CARIBBEAN ISLAND": "Black",
+        "BLACK/AFRICAN": "Black",
+        "ASIAN": "Asian",
+        "ASIAN - CHINESE": "Asian",
+        "ASIAN - SOUTH EAST ASIAN": "Asian",
+        "ASIAN - ASIAN INDIAN": "Asian",
+        "ASIAN - KOREAN": "Asian",
+        "HISPANIC/LATINO - PUERTO RICAN": "Hispanic/Latino",
+        "HISPANIC/LATINO - DOMINICAN": "Hispanic/Latino",
+        "HISPANIC/LATINO - GUATEMALAN": "Hispanic/Latino",
+        "HISPANIC/LATINO - SALVADORAN": "Hispanic/Latino",
+        "HISPANIC OR LATINO": "Hispanic/Latino",
+        "HISPANIC/LATINO - MEXICAN": "Hispanic/Latino",
+        "HISPANIC/LATINO - HONDURAN": "Hispanic/Latino",
+        "HISPANIC/LATINO - CUBAN": "Hispanic/Latino",
+        "HISPANIC/LATINO - COLUMBIAN": "Hispanic/Latino",
+        "HISPANIC/LATINO - CENTRAL AMERICAN": "Hispanic/Latino",
+        "SOUTH AMERICAN": "Hispanic/Latino",
+        "NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER": "Asian",
+        "AMERICAN INDIAN/ALASKA NATIVE": "Other",
+        "MULTIPLE RACE/ETHNICITY": "Other",
+        "OTHER": "Other",
+        "UNKNOWN": "Other",
+        "UNABLE TO OBTAIN": "Other",
+        "PATIENT DECLINED TO ANSWER": "Other",
+        "PORTUGUESE": "Other"
+    }
+
+    df['ethnicity'] = df['ethnicity'].map(ethnicity_mapping)
+
+    return df
