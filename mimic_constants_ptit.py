@@ -3,14 +3,8 @@ from pathlib import Path
 import os
 import re
 import glob 
-import torch
 import numpy as np
 import pandas as pd
-import torch.nn as nn
-import pytorch_lightning as pl
-import torch.nn.functional as F
-import torchvision.models as models
-from sklearn.model_selection import train_test_split
 from pathlib import Path
 
 num_classes = 1
@@ -36,51 +30,6 @@ def get_cardiomegaly_df(idp=False):
     else:
         df = pd.read_pickle(feature_folder / 'MIMIC_features_v3.pkl')
     return df[df['Cardiomegaly'].isin([0, 1])]
-
-def df_train_test_split(df, test_size=0.2, val_size=0.1):
-    # Pre-select test samples
-    test_set = df[df['split'] == 'test']
-    
-    # Remaining data (not in the test set)
-    remaining_df = df[df['split'] != 'test']
-    
-    # Group remaining data by 'subject_id'
-    grouped = remaining_df.groupby('subject_id')
-
-    # Ensure each subject is fully in one of the splits
-    subjects = grouped.first().index
-    
-    # Determine split sizes
-    total_remaining = len(remaining_df)
-    num_test = len(test_set)
-    adjusted_test_size = round(test_size - (num_test / len(df)), 2)
-    adjusted_train_size = round(1 - adjusted_test_size - val_size, 2)
-    
-    # Perform stratified train/val/test split based on subject_id
-    train_subjects, val_test_subjects = train_test_split(subjects, 
-                                                         test_size=round(val_size + adjusted_test_size, 2),
-                                                         train_size=adjusted_train_size,
-                                                         random_state=42)
-    
-    val_subjects, new_test_subjects = train_test_split(val_test_subjects,
-                                                       test_size=round(adjusted_test_size / (val_size + adjusted_test_size), 2),
-                                                       train_size=round(val_size / (val_size + adjusted_test_size), 2),
-                                                       random_state=42)
-
-    # Build the final splits
-    train_set = remaining_df[remaining_df['subject_id'].isin(train_subjects)]
-    val_set = remaining_df[remaining_df['subject_id'].isin(val_subjects)]
-    new_test_set = remaining_df[remaining_df['subject_id'].isin(new_test_subjects)]
-    
-    # Combine pre-selected test set with the newly created test set
-    final_test_set = pd.concat([test_set, new_test_set])
-    
-    # Add the split labels to the sets
-    train_set.loc[:, 'split'] = 'train'
-    val_set.loc[:, 'split'] = 'val'
-    final_test_set.loc[:, 'split'] = 'test'
-    
-    return train_set.reset_index(drop=True), val_set.reset_index(drop=True), final_test_set.reset_index(drop=True)
 
 # includes those with a high number of NaNs
 significant_variables_all = ['age_val', 'RR_mean', 'Chloride_mean', 'Urea_Nitrogren_mean', 'SaO2_mean', \
@@ -340,53 +289,6 @@ def get_checkpoint_path(image_type: str, suffix: str, run_id: str = None):
     # If there are multiple checkpoints, select the checkpoint with the latest step
     checkpoint_file = sorted(checkpoint_files, key=lambda x: int(x.as_posix().split('step=')[1].split('.ckpt')[0]))[-1]
     return checkpoint_file  # type: Path
-
-class DenseNet(pl.LightningModule):
-    def __init__(self, num_classes):
-        super().__init__()
-        self.num_classes = num_classes
-        self.model = models.densenet121()
-        num_features = self.model.classifier.in_features
-        self.model.classifier = nn.Linear(num_features, self.num_classes)
-
-    def remove_head(self):
-        num_features = self.model.classifier.in_features
-        id_layer = nn.Identity(num_features)
-        self.model.classifier = id_layer
-
-    def forward(self, x):
-        return self.model.forward(x)
-
-    def configure_optimizers(self):
-        params_to_update = []
-        for param in self.parameters():
-            if param.requires_grad == True:
-                params_to_update.append(param)
-        optimizer = torch.optim.Adam(params_to_update, lr=0.001)
-        return optimizer
-
-    def unpack_batch(self, batch):
-        return batch['image'], batch['label']
-
-    def process_batch(self, batch):
-        img, lab = self.unpack_batch(batch)
-        out = self.forward(img)
-        prob = torch.sigmoid(out)
-        loss = F.binary_cross_entropy(prob, lab)
-        return loss
-
-    def training_step(self, batch, batch_idx):
-        loss = self.process_batch(batch)
-        self.log('train_loss', loss)
-        return loss
-
-    def validation_step(self, batch, batch_idx):
-        loss = self.process_batch(batch)
-        self.log('val_loss', loss)
-
-    def test_step(self, batch, batch_idx):
-        loss = self.process_batch(batch)
-        self.log('test_loss', loss)
 
 def standardize_mimic_ethnicity(df):
     # Mapping of original ethnicities to standardized categories

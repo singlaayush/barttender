@@ -7,3 +7,4 @@ train.csv
 val.csv
 cardiomegaly/mimic/
 cardiomegaly/wandb/
+ptit-venv/

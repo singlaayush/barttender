@@ -1,0 +1,33 @@
+Plotting Box Plots for xray ablation with barcode order: age, chloride, rr, urea, nitrogren, magnesium, glucose, phosphate, hematocrit.
+Plotted Saliency Map Box Plots.
+Plotted Saliency Map Scatter Plot.
+Cardiomegaly Saliency P-Value: 0.0
+Cardiomegaly Saliency F-Statistic: 1232.496013807281
+There is a significant difference between the distributions.
+Plotted Integrated Gradients Map Box Plots.
+Plotted Integrated Gradients Map Scatter Plot.
+Cardiomegaly Integrated Gradients P-Value: 0.0
+Cardiomegaly Integrated Gradients F-Statistic: 825.9577083868664
+There is a significant difference between the distributions.
+Plotting Box Plots for noise ablation with barcode order: age, chloride, rr, urea, nitrogren, magnesium, glucose, phosphate, hematocrit.
+Plotted Saliency Map Box Plots.
+Plotted Saliency Map Scatter Plot.
+Cardiomegaly Saliency P-Value: 6.441931921801724e-193
+Cardiomegaly Saliency F-Statistic: 126.35230929486242
+There is a significant difference between the distributions.
+Plotted Integrated Gradients Map Box Plots.
+Plotted Integrated Gradients Map Scatter Plot.
+Cardiomegaly Integrated Gradients P-Value: 0.0
+Cardiomegaly Integrated Gradients F-Statistic: 620.2102740431213
+There is a significant difference between the distributions.
+Plotting Box Plots for blank ablation with barcode order: age, chloride, rr, urea, nitrogren, magnesium, glucose, phosphate, hematocrit.
+Plotted Saliency Map Box Plots.
+Plotted Saliency Map Scatter Plot.
+Cardiomegaly Saliency P-Value: 1.8604421241652285e-55
+Cardiomegaly Saliency F-Statistic: 35.76283647783063
+There is a significant difference between the distributions.
+Plotted Integrated Gradients Map Box Plots.
+Plotted Integrated Gradients Map Scatter Plot.
+Cardiomegaly Integrated Gradients P-Value: 5.549549238385802e-106
+Cardiomegaly Integrated Gradients F-Statistic: 67.81776408768094
+There is a significant difference between the distributions.
