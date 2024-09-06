@@ -91,13 +91,13 @@ def compute_stats(data):
         np.std(np.abs(non_zero - np.median(non_zero)))
     ])
 
-def process_and_save_stats(attrs_input, batch_filenames, save_dir, stats_file, image_type, suffix):
+def process_and_save_stats(attrs_input, batch_filenames, save_dir, stats_file, image_type, suffix, blur, to_ignore):
     # threshold and blur the saliency maps
-    masks = normalize(attrs_input, blur=5, threshold=0.9, masked_opacity=0.0)
+    masks = normalize(attrs_input, blur=blur, threshold=0.9, masked_opacity=0.0)  # blur default is 5
     
     # Define areas of interest
     areas = {
-        f'{image_type}': slice(None, 185),
+        f'{image_type}': slice(None, 185 - to_ignore),
 	    'age_bar': slice(185, 190),
 	    'chloride_bar': slice(190, 194),
 	    'rr_bar': slice(194, 198),
@@ -121,14 +121,14 @@ def process_and_save_stats(attrs_input, batch_filenames, save_dir, stats_file, i
     df = pd.DataFrame(stats, columns=stats_header)
     df.to_csv(stats_file, mode='a', header=not os.path.exists(stats_file), index=False)
 
-def main(image_type, df, label, data_dir, preproc_dir, save_dir, stats_save_path, batch_size, suffix):
+def main(image_type, df, label, data_dir, preproc_dir, save_dir, stats_save_path, batch_size, suffix, blur, to_ignore):
     total_images = len(df)
     with tqdm(total=total_images, desc="Processing images", unit="img") as pbar:
         for batch, batch_filenames in process_batch(df['path'], data_dir, preproc_dir, save_dir, batch_size):
-            process_and_save_stats(batch, batch_filenames, save_dir, stats_save_path, image_type, suffix)
+            process_and_save_stats(batch, batch_filenames, save_dir, stats_save_path, image_type, suffix, blur, to_ignore)
             pbar.update(len(batch_filenames))
 
-def cli(image_type: str = 'xray', order = None, batch_size: int = 64, mask_type: str = 'saliency', label: str = 'cardiomegaly', split: str = 'test', run_id: str = None, idp: bool = False, nan: bool = False, no_bars: bool = False):
+def cli(image_type: str = 'xray', order = None, batch_size: int = 64, mask_type: str = 'saliency', label: str = 'cardiomegaly', split: str = 'test', to_ignore: int = 0, blur: int = 5, run_id: str = None, debug: bool = False, idp: bool = False, nan: bool = False, no_bars: bool = False):
     """
     Runs the mask extraction pipeline.
     :param batch_size: Number of images to process in each batch
@@ -142,21 +142,22 @@ def cli(image_type: str = 'xray', order = None, batch_size: int = 64, mask_type:
 
     exp_dir = home_out_dir / f"cross-val/densenet-{image_type}-{suffix}-{'idp' if idp else 'no_idp'}/"
     df = pd.read_csv(exp_dir / f'{split}.csv')
-    
+
     data_dir = get_correct_root_dir(preproc_dir)
     save_dir = get_mask_save_dir_path(image_type, suffix, mask_type, label)
-    stats_save_path = get_mask_stats_csv_path(image_type, suffix, mask_type, label)
-    
+    stats_save_path = None
+    if debug:
+        stats_save_path = f'notebooks/{image_type}.csv'
+    else:
+        stats_save_path = get_mask_stats_csv_path(image_type, suffix, mask_type, label)
+
     open(stats_save_path, 'w').close()  # create/clear file
 
     print(f'Image Type: {image_type}')
     print(f"Barcode Order: {suffix.replace('_', ', ')}")
     print(f'save_dir: {save_dir}')
 
-    main(image_type, df, label, data_dir, preproc_dir, save_dir, stats_save_path, batch_size, suffix)
+    main(image_type, df, label, data_dir, preproc_dir, save_dir, stats_save_path, batch_size, suffix, blur, to_ignore)
 
 if __name__ == '__main__':
-    # python mimic_mask_extraction.py --image_type='xray'  --batch_size=64 --mask_type='ig' --idp
-    # python mimic_mask_extraction.py --image_type='noise' --batch_size=64 --mask_type='ig' --idp
-    # python mimic_mask_extraction.py --image_type='blank' --batch_size=64 --mask_type='ig' --idp
     fire.Fire(cli)

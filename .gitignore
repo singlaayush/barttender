@@ -8,3 +8,7 @@ val.csv
 cardiomegaly/mimic/
 cardiomegaly/wandb/
 ptit-venv/
+saliency_viz/
+blank.csv
+noise.csv
+xray.csv
