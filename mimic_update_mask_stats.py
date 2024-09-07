@@ -91,7 +91,30 @@ def compute_stats(data):
         np.std(np.abs(non_zero - np.median(non_zero)))
     ])
 
-def process_and_save_stats(attrs_input, batch_filenames, save_dir, stats_file, image_type, suffix, blur, to_ignore):
+def compute_weighted_stats(data, data_area, attn_map_area, total_attn_map_area):
+    """Compute statistics for a batch of data."""
+    non_zero = data[data != 0]
+    if attn_map_area == 0:
+        return np.zeros(12)  # Return zeros if all data is zero
+    meann = non_zero.mean()  # misspelled on purpose to avoid clashes in namespace
+    fraction_attn_area = attn_map_area / total_attn_map_area if total_attn_map_area else 0
+    iou = attn_map_area / (data_area + total_attn_map_area - attn_map_area)
+    return np.array([
+        meann,
+        non_zero.min(),
+        np.percentile(non_zero, 25),
+        np.median(non_zero),
+        np.percentile(non_zero, 75),
+        non_zero.max(),
+        np.std(non_zero),
+        np.std(np.abs(non_zero - np.median(non_zero))),
+        meann * fraction_attn_area,
+        meann * iou,
+        fraction_attn_area,
+        iou
+    ])
+
+def process_and_save_stats(attrs_input, batch_filenames, save_dir, stats_file, image_type, suffix, blur, to_ignore, debug):
     # threshold and blur the saliency maps
     masks = normalize(attrs_input, blur=blur, threshold=0.9, masked_opacity=0.0)  # blur default is 5
     
@@ -112,20 +135,27 @@ def process_and_save_stats(attrs_input, batch_filenames, save_dir, stats_file, i
     stats = []
     for idx, (mask, filename) in enumerate(zip(masks, batch_filenames)):
         # Compute stats for each area
+        total_attn_map_area = np.sum(mask != 0)
+        #print(total_attn_map_area)
         for area_name, area_slice in areas.items():
             area_data = mask[:, area_slice, :].flatten()  # CHW
-            area_stats = compute_stats(area_data)
+            attn_map_area = np.sum(area_data != 0)  
+            area_stats = None
+            if debug:
+                area_stats = compute_weighted_stats(area_data, len(area_data), attn_map_area, total_attn_map_area)
+            else:
+                area_stats = compute_stats(area_data)
             stats.append([filename, area_name] + area_stats.tolist())
-    
+    header = stats_header_debug if debug else stats_header 
     # Convert to DataFrame and append to CSV
-    df = pd.DataFrame(stats, columns=stats_header)
+    df = pd.DataFrame(stats, columns=header)
     df.to_csv(stats_file, mode='a', header=not os.path.exists(stats_file), index=False)
 
-def main(image_type, df, label, data_dir, preproc_dir, save_dir, stats_save_path, batch_size, suffix, blur, to_ignore):
+def main(image_type, df, label, data_dir, preproc_dir, save_dir, stats_save_path, batch_size, suffix, blur, to_ignore, debug):
     total_images = len(df)
     with tqdm(total=total_images, desc="Processing images", unit="img") as pbar:
         for batch, batch_filenames in process_batch(df['path'], data_dir, preproc_dir, save_dir, batch_size):
-            process_and_save_stats(batch, batch_filenames, save_dir, stats_save_path, image_type, suffix, blur, to_ignore)
+            process_and_save_stats(batch, batch_filenames, save_dir, stats_save_path, image_type, suffix, blur, to_ignore, debug)
             pbar.update(len(batch_filenames))
 
 def cli(image_type: str = 'xray', order = None, batch_size: int = 64, mask_type: str = 'saliency', label: str = 'cardiomegaly', split: str = 'test', to_ignore: int = 0, blur: int = 5, run_id: str = None, debug: bool = False, idp: bool = False, nan: bool = False, no_bars: bool = False):
@@ -146,10 +176,11 @@ def cli(image_type: str = 'xray', order = None, batch_size: int = 64, mask_type:
     data_dir = get_correct_root_dir(preproc_dir)
     save_dir = get_mask_save_dir_path(image_type, suffix, mask_type, label)
     stats_save_path = None
-    if debug:
-        stats_save_path = f'notebooks/{image_type}.csv'
-    else:
-        stats_save_path = get_mask_stats_csv_path(image_type, suffix, mask_type, label)
+    #if debug:
+    #    stats_save_path = f'notebooks/{image_type}.csv'
+    #else:
+
+    stats_save_path = get_mask_stats_csv_path(image_type, suffix, mask_type, label)
 
     open(stats_save_path, 'w').close()  # create/clear file
 
@@ -157,7 +188,7 @@ def cli(image_type: str = 'xray', order = None, batch_size: int = 64, mask_type:
     print(f"Barcode Order: {suffix.replace('_', ', ')}")
     print(f'save_dir: {save_dir}')
 
-    main(image_type, df, label, data_dir, preproc_dir, save_dir, stats_save_path, batch_size, suffix, blur, to_ignore)
+    main(image_type, df, label, data_dir, preproc_dir, save_dir, stats_save_path, batch_size, suffix, blur, to_ignore, debug)
 
 if __name__ == '__main__':
     fire.Fire(cli)

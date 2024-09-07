@@ -178,6 +178,9 @@ lab_labels_min_cols    = list(lab_labels_min.values())
 stats_header = ['filename', 'area', 'mean', 'min', '25th_percentile', 'median', 
                '75th_percentile', 'max', 'std_mean', 'std_median']
 
+stats_header_debug = ['filename', 'area', 'mean', 'min', '25th_percentile', 'median', 
+               '75th_percentile', 'max', 'std_mean', 'std_median', 'mean_w_frac', 'mean_w_iou', 'fraction_attn_area', 'iou']
+
 k_fold_run_id = {'xray' : 'wqzq428c',
 'noise': 'jfpf2s6m',
 'blank': 'yxa5wmrg'}
