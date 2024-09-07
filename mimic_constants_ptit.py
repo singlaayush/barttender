@@ -40,16 +40,28 @@ significant_variables = ['age_val', 'Chloride_mean', 'RR_mean', 'Urea_Nitrogren_
 
 significant_variables_areas = {
     'image': slice(None, 185),
-	'age_bar': slice(185, 190),
-	'chloride_bar': slice(190, 194),
-	'rr_bar': slice(194, 198),
-	'urea_bar': slice(198, 202),
-	'nitrogren_bar': slice(202, 207),
-	'magnesium_bar': slice(207, 211),
-	'glucose_bar': slice(211, 215),
-	'phosphate_bar': slice(215, 220),
-	'hematocrit_bar': slice(220, 224),
+	'age_bar': slice(185, 188),
+	'chloride_bar': slice(188, 193),
+	'rr_bar': slice(193, 198),
+	'urea_nitrogen_bar': slice(198, 203),
+	'magnesium_bar': slice(203, 209),
+	'glucose_bar': slice(209, 214),
+	'phosphate_bar': slice(214, 219),
+	'hematocrit_bar': slice(219, None)
 }
+
+def get_significant_variables_areas(image_type):
+    return {
+        f'{image_type}': slice(None, 185),
+	    'age_bar': slice(185, 188),
+	    'chloride_bar': slice(188, 193),
+	    'rr_bar': slice(193, 198),
+	    'urea_nitrogen_bar': slice(198, 203),
+	    'magnesium_bar': slice(203, 209),
+	    'glucose_bar': slice(209, 214),
+	    'phosphate_bar': slice(214, 219),
+	    'hematocrit_bar': slice(219, None)
+    }
 
 z_scores = {
     "Cardiomegaly": {
@@ -215,7 +227,7 @@ def get_mask_stats_csv_path(image_type, suffix, mask_type, label):
     return nb_group_dir / f'{image_type}_{suffix}/{mask_type}/{mask_type}_{label.lower().replace(" ", "_")}_stats.csv'
 
 def get_mask_stats_csv(image_type, suffix, mask_type, label):
-    return pd.read_csv(get_mask_stats_csv_path(image_type, suffix, mask_type, label), names=stats_header)
+    return pd.read_csv(get_mask_stats_csv_path(image_type, suffix, mask_type, label), names=stats_header_debug)
 
 def sanity_check_stats_csv(stats_df, areas=significant_variables_areas):
     total_len = stats_df.shape[0]

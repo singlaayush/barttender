@@ -11,15 +11,15 @@ mask_type_strs = {'ig': 'Integrated Gradients', 'saliency': 'Saliency'}
 
 def perform_anova(image_type, suffix, mask_type, label):
     merged_df = get_merged_stats_sample_df(image_type, suffix, mask_type, label, split='test', idp=True)
-    image = merged_df.loc[(merged_df['area'] == f'{image_type}')]['mean'].values
-    age = merged_df.loc[(merged_df['area'] == 'age_bar')]['mean'].values
-    urea = merged_df.loc[(merged_df['area'] == 'urea_bar')]['mean'].values
-    chloride = merged_df.loc[(merged_df['area'] == 'chloride_bar')]['mean'].values
-    rr = merged_df.loc[(merged_df['area'] == 'rr_bar')]['mean'].values
-    magnesium = merged_df.loc[(merged_df['area'] == 'magnesium_bar')]['mean'].values
-    glucose = merged_df.loc[(merged_df['area'] == 'glucose_bar')]['mean'].values
-    phosphate = merged_df.loc[(merged_df['area'] == 'phosphate_bar')]['mean'].values
-    hematocrit = merged_df.loc[(merged_df['area'] == 'hematocrit_bar')]['mean'].values
+    image = merged_df.loc[(merged_df['area'] == f'{image_type}')]['mean_w_iou'].values
+    age = merged_df.loc[(merged_df['area'] == 'age_bar')]['mean_w_iou'].values
+    urea = merged_df.loc[(merged_df['area'] == 'urea_nitrogen_bar')]['mean_w_iou'].values
+    chloride = merged_df.loc[(merged_df['area'] == 'chloride_bar')]['mean_w_iou'].values
+    rr = merged_df.loc[(merged_df['area'] == 'rr_bar')]['mean_w_iou'].values
+    magnesium = merged_df.loc[(merged_df['area'] == 'magnesium_bar')]['mean_w_iou'].values
+    glucose = merged_df.loc[(merged_df['area'] == 'glucose_bar')]['mean_w_iou'].values
+    phosphate = merged_df.loc[(merged_df['area'] == 'phosphate_bar')]['mean_w_iou'].values
+    hematocrit = merged_df.loc[(merged_df['area'] == 'hematocrit_bar')]['mean_w_iou'].values
     
     distributions = [image, age, urea, chloride, rr, magnesium, glucose, phosphate, hematocrit]
     
@@ -37,18 +37,18 @@ def perform_anova(image_type, suffix, mask_type, label):
 
 def get_mean_median(image_type, suffix, mask_type, label):
     merged_df = get_merged_stats_sample_df(image_type, suffix, mask_type, label, split='test', idp=True)
-    image_mean   = merged_df.loc[(merged_df['area'] == f'{image_type}')]['mean'].mean()
+    image_mean   = merged_df.loc[(merged_df['area'] == f'{image_type}')]['mean_w_iou'].mean()
     image_median = merged_df.loc[(merged_df['area'] == f'{image_type}')]['median'].median()
-    age_mean    = merged_df.loc[(merged_df['area'] == 'age_bar')]['mean'].mean()
-    urea_mean    = merged_df.loc[(merged_df['area'] == 'urea_bar')]['mean'].mean()
-    chloride_mean    = merged_df.loc[(merged_df['area'] == 'chloride_bar')]['mean'].mean()
-    rr_mean    = merged_df.loc[(merged_df['area'] == 'rr_bar')]['mean'].mean()
-    magnesium_mean    = merged_df.loc[(merged_df['area'] == 'magnesium_bar')]['mean'].mean()
-    glucose_mean    = merged_df.loc[(merged_df['area'] == 'glucose_bar')]['mean'].mean()
-    phosphate_mean    = merged_df.loc[(merged_df['area'] == 'phosphate_bar')]['mean'].mean()
-    hematocrit_mean    = merged_df.loc[(merged_df['area'] == 'hematocrit_bar')]['mean'].mean()
+    age_mean    = merged_df.loc[(merged_df['area'] == 'age_bar')]['mean_w_iou'].mean()
+    urea_mean    = merged_df.loc[(merged_df['area'] == 'urea_nitrogen_bar')]['mean_w_iou'].mean()
+    chloride_mean    = merged_df.loc[(merged_df['area'] == 'chloride_bar')]['mean_w_iou'].mean()
+    rr_mean    = merged_df.loc[(merged_df['area'] == 'rr_bar')]['mean_w_iou'].mean()
+    magnesium_mean    = merged_df.loc[(merged_df['area'] == 'magnesium_bar')]['mean_w_iou'].mean()
+    glucose_mean    = merged_df.loc[(merged_df['area'] == 'glucose_bar')]['mean_w_iou'].mean()
+    phosphate_mean    = merged_df.loc[(merged_df['area'] == 'phosphate_bar')]['mean_w_iou'].mean()
+    hematocrit_mean    = merged_df.loc[(merged_df['area'] == 'hematocrit_bar')]['mean_w_iou'].mean()
     age_median  = merged_df.loc[(merged_df['area'] == 'age_bar')]['median'].median()
-    urea_median    = merged_df.loc[(merged_df['area'] == 'urea_bar')]['median'].median()
+    urea_median    = merged_df.loc[(merged_df['area'] == 'urea_nitrogen_bar')]['median'].median()
     chloride_median    = merged_df.loc[(merged_df['area'] == 'chloride_bar')]['median'].median()
     rr_median    = merged_df.loc[(merged_df['area'] == 'rr_bar')]['median'].median()
     magnesium_median    = merged_df.loc[(merged_df['area'] == 'magnesium_bar')]['median'].median()
@@ -59,7 +59,7 @@ def get_mean_median(image_type, suffix, mask_type, label):
     mean = {
         f'{image_type}': image_mean,
         'age': age_mean,
-        'urea' : urea_mean,
+        'urea_nitrogen' : urea_mean,
         'chloride' : chloride_mean,
         'rr' : rr_mean,
         'magnesium' : magnesium_mean,
@@ -71,7 +71,7 @@ def get_mean_median(image_type, suffix, mask_type, label):
     median = {
         f'{image_type}': image_median,
         'age': age_median,
-        'urea' : urea_median,
+        'urea_nitrogen' : urea_median,
         'chloride' : chloride_median,
         'rr' : rr_median,
         'magnesium' : magnesium_median,
@@ -93,7 +93,7 @@ def box_plot(image_type, suffix, mask_type, label, run_id=None, verbose=False):
         #makedirs(save_dir_2, exist_ok=True)
 
     mask_type_str = mask_type_strs[mask_type]
-    statistics = ['mean', 'median', 'min', '25th_percentile', '75th_percentile', 'max', 'std_mean', 'std_median']
+    statistics = ['mean_w_iou', 'median', 'min', '25th_percentile', '75th_percentile', 'max', 'std_mean', 'std_median']
 
     for idx, stat in enumerate(statistics):
         plt.figure(figsize=(10, 6))

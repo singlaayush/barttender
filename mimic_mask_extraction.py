@@ -100,23 +100,35 @@ def compute_stats(data):
         np.std(np.abs(non_zero - np.median(non_zero)))
     ])
 
+def compute_weighted_stats(data, data_area, attn_map_area, total_attn_map_area):
+    """Compute statistics for a batch of data."""
+    non_zero = data[data != 0]
+    if attn_map_area == 0:
+        return np.zeros(12)  # Return zeros if all data is zero
+    meann = non_zero.mean()  # misspelled on purpose to avoid clashes in namespace
+    fraction_attn_area = attn_map_area / total_attn_map_area if total_attn_map_area else 0
+    iou = attn_map_area / (data_area + total_attn_map_area - attn_map_area)
+    return np.array([
+        meann,
+        non_zero.min(),
+        np.percentile(non_zero, 25),
+        np.median(non_zero),
+        np.percentile(non_zero, 75),
+        non_zero.max(),
+        np.std(non_zero),
+        np.std(np.abs(non_zero - np.median(non_zero))),
+        meann * fraction_attn_area,
+        meann * iou,
+        fraction_attn_area,
+        iou
+    ])
+
 def process_and_save_stats(attrs_input, batch_filenames, save_dir, stats_file, image_type):
     # threshold and blur the saliency maps
     masks = normalize(attrs_input, blur=5, threshold=0.9, masked_opacity=0.0)
     
     # Define areas of interest
-    areas = {
-        f'{image_type}': slice(None, 185),
-	    'age_bar': slice(185, 190),
-	    'chloride_bar': slice(190, 194),
-	    'rr_bar': slice(194, 198),
-	    'urea_bar': slice(198, 202),
-	    'nitrogren_bar': slice(202, 207),
-	    'magnesium_bar': slice(207, 211),
-	    'glucose_bar': slice(211, 215),
-	    'phosphate_bar': slice(215, 220),
-	    'hematocrit_bar': slice(220, 224),
-    }
+    areas = get_significant_variables_areas(image_type)
     
     stats = []
     for idx, (raw_mask, filename) in enumerate(zip(attrs_input, batch_filenames)):
@@ -129,13 +141,15 @@ def process_and_save_stats(attrs_input, batch_filenames, save_dir, stats_file, i
         mask = masks[idx]
         
         # Compute stats for each area
+        total_attn_map_area = np.sum(mask != 0)  # number of non-zero pixels in entire mask
         for area_name, area_slice in areas.items():
             area_data = mask[:, area_slice, :].flatten()  # CHW
-            area_stats = compute_stats(area_data)
+            attn_map_area = np.sum(area_data != 0) # number of non-zero pixels in region of mask
+            area_stats = compute_weighted_stats(area_data, len(area_data), attn_map_area, total_attn_map_area)
             stats.append([filename, area_name] + area_stats.tolist())
     
     # Convert to DataFrame and append to CSV
-    df = pd.DataFrame(stats, columns=stats_header)
+    df = pd.DataFrame(stats, columns=stats_header_debug)
     df.to_csv(stats_file, mode='a', header=not os.path.exists(stats_file), index=False)
 
 def main(image_type, df, attribution, label, data_dir, preproc_dir, save_dir, stats_save_path, batch_size, checkpoint_file):

@@ -119,27 +119,16 @@ def process_and_save_stats(attrs_input, batch_filenames, save_dir, stats_file, i
     masks = normalize(attrs_input, blur=blur, threshold=0.9, masked_opacity=0.0)  # blur default is 5
     
     # Define areas of interest
-    areas = {
-        f'{image_type}': slice(None, 185 - to_ignore),
-	    'age_bar': slice(185, 190),
-	    'chloride_bar': slice(190, 194),
-	    'rr_bar': slice(194, 198),
-	    'urea_bar': slice(198, 202),
-	    'nitrogren_bar': slice(202, 207),
-	    'magnesium_bar': slice(207, 211),
-	    'glucose_bar': slice(211, 215),
-	    'phosphate_bar': slice(215, 220),
-	    'hematocrit_bar': slice(220, 224),
-    }
+    areas = get_significant_variables_areas(image_type)
     
     stats = []
     for idx, (mask, filename) in enumerate(zip(masks, batch_filenames)):
         # Compute stats for each area
-        total_attn_map_area = np.sum(mask != 0)
+        total_attn_map_area = np.sum(mask != 0)  # number of non-zero pixels in entire mask
         #print(total_attn_map_area)
         for area_name, area_slice in areas.items():
             area_data = mask[:, area_slice, :].flatten()  # CHW
-            attn_map_area = np.sum(area_data != 0)  
+            attn_map_area = np.sum(area_data != 0) # number of non-zero pixels in region of mask
             area_stats = None
             if debug:
                 area_stats = compute_weighted_stats(area_data, len(area_data), attn_map_area, total_attn_map_area)
