@@ -89,6 +89,28 @@ significant_variables_all = ['age_val', 'RR_mean', 'Chloride_mean', 'Urea_Nitrog
 # includes only those with a small number of NaNs
 significant_variables = ['age_val', 'Chloride_mean', 'RR_mean', 'Urea_Nitrogren_mean', 'Magnesium_mean', 'Glucose_mean', 'Phosphate_mean', 'Hematocrit_mean']
 
+lr_variables_all = [
+    'Temp(F)_mean',
+    'Sodium_mean',
+    'PlateletCount_mean',
+    'HR_mean',
+    'NBPm_mean',
+    'NBPs_mean',
+    'RR_mean',
+    'SpO2_mean',
+    'NBPd_mean',
+    'Glucose_mean',
+    'Creatinine_mean',
+    'Chloride_mean',
+    'Magnesium_mean',
+    'PTT_mean',
+    'Calcium_Total_mean',
+    'Phosphate_mean',
+    'Urea_Nitrogren_mean',
+    'Hematocrit_mean',
+    'Potassium_mean'
+]
+
 significant_variables_areas = {
     'image': slice(None, 185),
 	'age_bar': slice(185, 188),
@@ -257,11 +279,13 @@ k_fold_test_pred_csv_path = {
 def rgb2gray(rgb):
     return np.dot(rgb[...,:3], [0.2989, 0.5870, 0.1140])
 
-def get_barcode_order_info(order=None, no_bars=False, nan=False, bar_variables=significant_variables):
+def get_barcode_order_info(order=None, no_bars=False, nan=False, only_bars=False, bar_variables=significant_variables):
     if no_bars:
         return None, 'no_bars'
     if nan:
         bar_variables=significant_variables_all
+    if only_bars:
+        bar_variables=lr_variables_all
     og_order = np.array(bar_variables)
     order = [int(x) for x in order.strip('[]').split(',')] if isinstance(order, str) else order
     order = list(range(len(bar_variables))) if order is None else order

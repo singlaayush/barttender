@@ -300,12 +300,12 @@ def compute_metrics(y_true, y_pred, y_logits):
     }
 
 
-def main(image_type: str = 'xray', order = None, batch_size: int = 192, epochs: int = 100, num_workers: int = 0, n_splits: int = 10, idp: bool = False, nan: bool = False, no_bars: bool = False):
+def main(image_type: str = 'xray', order = None, batch_size: int = 192, epochs: int = 100, num_workers: int = 0, n_splits: int = 10, idp: bool = True, nan: bool = False, only_bars: bool = False, no_bars: bool = False):
 
     # sets seeds for numpy, torch, python.random and PYTHONHASHSEED.
     pl.seed_everything(42, workers=True)
-
-    order, suffix = get_barcode_order_info(order=order, no_bars=no_bars, nan=nan)
+    image_type = 'only_bars' if only_bars else image_type
+    order, suffix = get_barcode_order_info(order=order, no_bars=no_bars, nan=nan, only_bars=only_bars)
     preproc_dir = get_preproc_subpath(image_type, suffix)
     root_dir = get_correct_root_dir(preproc_dir)
     img_data_dir = root_dir / preproc_dir

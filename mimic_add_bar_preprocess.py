@@ -120,8 +120,10 @@ def npy_bar(data, colormap, img_w=500, img_h=100, add_label=False, add_colormap=
             plt.show()
         else:
             bar_img = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8)
-            # slicing removes whitespace from bars; need to redo if bar size is changed
-            bar_img = bar_img.reshape(fig.canvas.get_width_height()[::-1] + (4,))[3:-2, :, :3]
+            bar_img = bar_img.reshape(fig.canvas.get_width_height()[::-1] + (4,))[:, :, :3]
+            if img_h != 224:
+                # slicing removes whitespace from bars; need to redo if bar size is changed
+                bar_img = bar_img[3:-2, :, :]  # HWC
             plt.close(fig)
         
             if verbose:
@@ -175,7 +177,39 @@ def preprocess_and_append_bars(df, image_type, img_data_dir, idp=False, order=No
             else:  
                 imsave(out_path, combined_img.astype(np.uint8))
 
-def cli(image_type='xray', order=None, start=0, end=None, label='Cardiomegaly', root_dir: str = nb_group_dir, idp: bool = False, no_bars: bool = False):
+def preprocess_only_bars(df, img_data_dir, idp=True, order=None, bar_vars=lr_variables_all, colormap=plt.colormaps['binary'], verbose=False):
+    df_cxr = df.copy()
+    out_dir = img_data_dir
+    img_type = 'only_bars'
+    order, suffix = get_barcode_order_info(order, bar_variables=lr_variables_all)
+    preproc_dir = get_preproc_subpath(img_type, suffix)
+
+    print(f'Image Type: {img_type}')
+    print(f"Barcode Order: {suffix.replace('_', ', ')}")
+    print(f'preproc_dir: {out_dir / preproc_dir}')
+    
+    if not verbose:
+        os.makedirs(out_dir/ preproc_dir, exist_ok=True)
+
+    for idx, p in enumerate(tqdm(df_cxr['path'])):
+        out_path = construct_preproc_path(p, out_dir, preproc_dir)
+
+        if (not os.path.exists(out_path)) or verbose:
+            height = 224; width = 224
+            # Generate the barcode and append it to the bottom of the image
+            bar_img = npy_bar(df_cxr.iloc[[idx]], colormap, img_h=height, img_w=width)            
+            if verbose:
+                fig, ax = plt.subplots(1, 1, figsize=(4, 4))
+                ax.imshow(bar_img.astype(np.uint8))
+                y_ticks = range(0, 224, 10)
+                plt.yticks(y_ticks)
+                #plt.tick_params(axis='y', labelsize=5)
+                fig.tight_layout()
+                plt.show()
+            else:
+                imsave(out_path, bar_img.astype(np.uint8))
+
+def cli(image_type='xray', order=None, start=0, end=None, label='Cardiomegaly', root_dir: str = nb_group_dir, idp: bool = False, no_bars: bool = False, only_bars: bool = False):
     """
     Runs the mask extraction pipeline.
     :param batch_size: Number of images to process in each batch
@@ -186,12 +220,16 @@ def cli(image_type='xray', order=None, start=0, end=None, label='Cardiomegaly', 
     
     if no_bars:
         preprocess_no_bars(get_master_df(idp=idp)[start:end], out_dir=root_dir)
+    elif only_bars:
+        df_cxr = preprocess_mimic_df(idp=idp, order=order, bar_vars=lr_variables_all, label=label.title())  # contains all splits
+        preprocess_only_bars(df_cxr[start:end], img_data_dir=root_dir, order=order)
     else:
         df_cxr = preprocess_mimic_df(idp=idp, order=order, bar_vars=significant_variables, label=label.title())  # contains all splits
         preprocess_and_append_bars(df_cxr[start:end], image_type=image_type, order=order, img_data_dir=root_dir)
 
 if __name__ == '__main__':
     # python mimic_add_bar_preprocess.py --no_bars
+    # python mimic_add_bar_preprocess.py --only_bars
     # python mimic_add_bar_preprocess.py image_type='xray'
     fire.Fire(cli)
 

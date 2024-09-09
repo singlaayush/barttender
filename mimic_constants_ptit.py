@@ -2,7 +2,7 @@ import pandas as pd
 from pathlib import Path
 import os
 import re
-import glob 
+import glob
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -37,6 +37,11 @@ significant_variables_all = ['age_val', 'RR_mean', 'Chloride_mean', 'Urea_Nitrog
 
 # includes only those with a small number of NaNs
 significant_variables = ['age_val', 'Chloride_mean', 'RR_mean', 'Urea_Nitrogren_mean', 'Magnesium_mean', 'Glucose_mean', 'Phosphate_mean', 'Hematocrit_mean']
+
+lr_variables_all = ['NBPd_mean', 'NBPm_mean', 'SpO2_mean', 'PlateletCount_mean', 'Temp(F)_mean', \
+    'Sodium_mean', 'HR_mean', 'NBPs_mean', 'RR_mean', 'Urea_Nitrogren_mean', 'Phosphate_mean', \
+    'PTT_mean', 'Potassium_mean', 'Lactate_mean', 'Magnesium_mean', 'Calcium_Total_mean', 'Chloride_mean', \
+    'ALT_mean', 'Bilirubin', 'Creatinine_mean', 'Alkaline_Phosphatase_mean', 'Hematocrit_mean', 'Glucose_mean']
 
 significant_variables_areas = {
     'image': slice(None, 185),
